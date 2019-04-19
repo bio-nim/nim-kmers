@@ -1,0 +1,29 @@
+Starting seq: ATCGGCTACTATT
+kms
+pos:1 strand:true seq:AGCCGATGATAA bin:832088
+pos:1 strand:false seq:TCGGCTACTATT bin:14315983
+pos:0 strand:true seq:TAGCCGATGATA bin:3328355
+pos:0 strand:false seq:ATCGGCTACTAT bin:3578995
+
+qms
+pos:1 strand:true seq:AGCCGATGATAA bin:832088
+pos:1 strand:false seq:TCGGCTACTATT bin:14315983
+pos:0 strand:true seq:TAGCCGATGATA bin:3328355
+pos:0 strand:false seq:ATCGGCTACTAT bin:3578995
+[TEST:DNA->BIT->DNA] kmer: 832088 pos:1 expecting:AGCCGATGATAA observed:AGCCGATGATAA [PASS]
+[TEST:DNA->BIT->DNA] kmer: 3328355 pos:0 expecting:TAGCCGATGATA observed:TAGCCGATGATA [PASS]
+[TEST:DNA->BIT->DNA] kmer: 3578995 pos:0 expecting:ATCGGCTACTAT observed:ATCGGCTACTAT [PASS]
+[TEST:DNA->BIT->DNA] kmer: 14315983 pos:1 expecting:TCGGCTACTATT observed:TCGGCTACTATT [PASS]
+Searching through 4 kmers
+qb:0 tb:0 qs:false ts:false ATCGGCTACTAT ATCGGCTACTAT
+qb:0 tb:0 qs:true ts:true TAGCCGATGATA TAGCCGATGATA
+qb:1 tb:1 qs:false ts:false TCGGCTACTATT TCGGCTACTATT
+qb:1 tb:1 qs:true ts:true AGCCGATGATAA AGCCGATGATAA
+[TEST:HASKMER] positive query:832088 response:true [PASS]
+[TEST:HASKMER] positive query:14315983 response:true [PASS]
+[TEST:HASKMER] positive query:3328355 response:true [PASS]
+[TEST:HASKMER] positive query:3578995 response:true [PASS]
+[TEST:HASKMER] negative query:83 response:false [PASS]
+[TEST:HASKMER] negative query:0 response:false [PASS]
+[TEST:HASKMER] negative query:5 response:false [PASS]
+[TEST:HASKMER] negative query:10000 response:false [PASS]
