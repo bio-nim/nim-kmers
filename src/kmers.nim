@@ -76,6 +76,26 @@ template `<<`(a, b: uint64): uint64 =
 template `>>`(a, b: uint64): uint64 =
     a shr b
 
+## Return binary version of kmer exactly matching Dna.
+## Mostly for testing, as this is not efficient for sliding windows.
+## NOT FINISHED.
+#
+proc encode(sq: Dna) =
+    assert sq.len() <= 32
+    let k = sq.len()
+    let
+        shift1: uint64 = 2'u64 * (k - 1).uint64
+        mask: uint64 = (1'u64 << (2 * k).uint64) - 1
+    var
+        forward_bin: Bin = 0
+        reverse_bin: Bin = 0
+    for i in 0 ..< k:
+        let ch = cast[uint8](sq[i])
+        let c = seq_nt4_table[ch].uint64
+        assert c < 4
+        forward_bin = (forward_bin << 2 or c) and mask
+        reverse_bin = (reverse_bin >> 2) or (
+                3'u64 xor c) << shift1
 
 ##  Converts a char * into a set of seed_t objects.
 ##  @param  sq  - sequence
@@ -86,7 +106,7 @@ proc dna_to_kmers*(sq: Dna; k: int): pot_t =
     if k > 32:
         raiseEx("k > 32")
 
-    var
+    let
         shift1: uint64 = 2'u64 * (k - 1).uint64
         mask: uint64 = (1'u64 << (2 * k).uint64) - 1
     #echo format("shift1=$# mask=$#", shift1, mask)
@@ -219,8 +239,8 @@ proc cmp_seeds(a, b: seed_t): int =
 
     return 1
 
-##  A function that sorts and loads the kmers into a hash table and sets the sort
-##  flag.
+##  Sort the seeds and load the kmers into a hash table.
+##  For any dups, the table refers to the first seed with that kmer.
 ##  @param  pot_t * - a pointer to a pot
 ##  @return 0 if a new table was created
 #
@@ -246,14 +266,14 @@ proc make_searchable*(kms: pot_t): int {.discardable.} =
     assert kms.searchable
     return 0
 
-##  A function that simply checks for the presence or absense of a kmer in a
-##  pot regaurdless of the position
+##  Check for the presence or absence of a kmer in a
+##  pot regardless of the position.
 ##  @param  pot_t * - a pointer to a pot
-##  @return false if kmer doesn't exist or pot is not searchable
+##  @return false if kmer doesn't exist
 #
 proc haskmer*(target: pot_t; query: Bin): bool =
     if not target.searchable:
-        return false
+        raiseEx("haskmer requires searchable pot")
     if target.ht.hasKey(query):
         return true
     return false
@@ -274,6 +294,8 @@ proc difference*(target, remove: pot_t) =
     assert target.searchable == false;
     target.seeds = kmer_stack
 
+## Return the seeds in the intersection of target and query.
+#
 proc search*(target: pot_t; query: pot_t): deques.Deque[seed_pair_t] =
     discard make_searchable(target)
     echo format("Searching through $# kmers", query.seeds.len())

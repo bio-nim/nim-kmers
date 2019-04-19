@@ -32,6 +32,7 @@ test "sorted_kmers":
     let got = sequtils.mapIt(kms.seeds, kmers.bin_to_dna(it.kmer, k.uint8,
             it.strand))
     check got == expected
+    #check kmers.haskmer("AGCCGATGATAA", kms)
 
 test "search":
     let
