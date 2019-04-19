@@ -34,7 +34,6 @@ type
         word_size*: uint8     # <=32
         seeds*: seq[seed_t]
         ht*: ref tables.Table[Bin, int]
-        searchable*: bool
 
 var seq_nt4_table: array[256, int] = [
         0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -145,7 +144,6 @@ proc dna_to_kmers*(sq: Dna; k: int): pot_t =
     kmers.seeds = newSeq[seed_t](n)
     #kmers.n = n.uint32
     kmers.word_size = k.uint8
-    kmers.searchable = false
     i = 0
 
     while i < n:
@@ -183,6 +181,9 @@ proc bin_to_dna*(kmer: Bin; k: uint8; strand: bool): Dna =
 
 proc nkmers*(pot: pot_t): int =
     return len(pot.seeds)
+
+proc searchable*(pot: pot_t): bool =
+    return pot.ht != nil
 
 ##  Prints the pot structure to STDOUT
 ##  @param pot a ref to the pot
@@ -242,7 +243,7 @@ proc make_searchable*(kms: pot_t): int {.discardable.} =
     if ndups > 0:
         echo format("WARNING: $# duplicates in kmer table", ndups)
 
-    kms.searchable = true
+    assert kms.searchable
     return 0
 
 ##  A function that simply checks for the presence or absense of a kmer in a
@@ -268,9 +269,9 @@ proc difference*(target, remove: pot_t) =
             kmer_stack.add(target.seeds[i])
 
     if target.searchable:
-        clear(target.ht)
+        target.ht = nil
 
-    target.searchable = false;
+    assert target.searchable == false;
     target.seeds = kmer_stack
 
 proc search*(target: pot_t; query: pot_t): deques.Deque[seed_pair_t] =
