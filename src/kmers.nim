@@ -194,7 +194,8 @@ proc bin_to_dna*(kmer: Bin; k: uint8; strand: bool): Dna =
         tmp = kmer
         offset = if not strand: (k - i - 1) * 2 else: (i * 2)
         tmp = tmp >> offset
-        dna[i] = lookup[mask and tmp]
+        #dna[i] = lookup[mask and tmp]
+        dna[i.int] = lookup[mask and tmp]
         inc(i)
 
     return dna
