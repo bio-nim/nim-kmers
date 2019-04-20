@@ -38,7 +38,7 @@ before_script:
     - export PATH="nim-$BRANCH/bin${PATH:+:$PATH}"
 script:
     # Replace uppercase strings!
-    - nim c --cc:$CC --verbosity:0 -r MYFILE.nim
+    - nim c --cc:$CC --verbosity:1 --listCmd -r tests/t_kmers.nim
     # Optional: build docs.
     #- nim doc --docSeeSrcUrl:https://github.com/AUTHOR/MYPROJECT/blob/master --project MYFILE.nim
 cache:
