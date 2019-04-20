@@ -43,8 +43,8 @@ test "search":
     check kmers.make_searchable(kms) == 0
     let hits = kmers.search(kms, qms)
     check hits.len() == 4
-    check sets.toHashSet(seqUtils.toSeq(hits)).len() == 4 # 4 unique items
-    #check sets.len(sets.toHashSet(seqUtils.toSeq(deques.items(hits)))) == 4  # same as above
+    #check sets.toSet(seqUtils.toSeq(hits)).len() == 4 # 4 unique items
+    check sets.len(sets.toSet(seqUtils.toSeq(deques.items(hits)))) == 4  # same as above
 
 suite "difference":
     let
@@ -59,20 +59,22 @@ suite "difference":
 
     test "difference_of_self_is_nothing":
         let kms = kmers.dna_to_kmers(sq, k)
-        let qms = deepCopy(kms)
+        #let qms = deepCopy(kms)
+        var qms: kmers.pot_t
+        deepCopy(qms, kms)
         check qms[] == kms[]
         check kmers.nkmers(qms) == 4
         check kmers.nkmers(kms) == 4
         discard kmers.make_searchable(qms)
         check qms.searchable
-        check not kms.searchable
+        check (not kms.searchable)
 
         kmers.difference(kms, qms)
 
         check kmers.nkmers(kms) == 0
         check kmers.nkmers(qms) == 4
         check qms.searchable
-        check not kms.searchable
+        check (not kms.searchable)
 
         let
             expected: array[0, string] = []
@@ -82,7 +84,9 @@ suite "difference":
     test "difference_of_nothing_is_self":
         let kms = kmers.dna_to_kmers(sq, k)
         let qms = kmers.dna_to_kmers("", k)
-        let orig = deepCopy(kms)
+        #let orig = deepCopy(kms)
+        var orig: kmers.pot_t
+        deepCopy(orig, kms)
         check kmers.nkmers(qms) == 0
         check kmers.nkmers(kms) == 4
         discard kmers.make_searchable(qms)
