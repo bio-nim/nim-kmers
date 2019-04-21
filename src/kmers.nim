@@ -271,10 +271,15 @@ proc make_searchable(seeds: var seq[seed_t], ht: var tables.TableRef[Bin, int]) 
 #    assert kms.searchable
 #    return 0
 
-proc initSpot*(kms: pot_t): spot_t =
+## Construct searchable-pot from pot.
+## Move construct seeds (i.e. original is emptied).
+#
+proc initSpot*(kms: var pot_t): spot_t =
     new(result)
-    result.seeds = kms.seeds  # semantically, seq is copied
     result.word_size = kms.word_size
+    shallowCopy(result.seeds, kms.seeds)
+    #kms.seeds = @[]
+    kms = nil  # simpler
     make_searchable(result.seeds, result.ht)
 
 ##  Check for the presence or absence of a kmer in a
