@@ -259,27 +259,18 @@ proc make_searchable(seeds: var seq[seed_t], ht: var tables.TableRef[Bin, int]) 
     if ndups > 0:
         echo format("WARNING: $# duplicates in kmer table", ndups)
 
+##  Construct searchable-pot from pot.
+##  Move construct seeds (i.e. original is emptied).
+##
 ##  Sort the seeds and load the kmers into a hash table.
 ##  For any dups, the table refers to the first seed with that kmer.
-##  @param  pot_t * - a pointer to a pot
-##  @return 0 if a new table was created
-#
-#proc make_searchable*(kms: pot_t): int {.discardable.} =
-#    if kms.searchable:
-#        return 1
-#    make_searchable(kms.seeds, kms.ht)
-#    assert kms.searchable
-#    return 0
-
-## Construct searchable-pot from pot.
-## Move construct seeds (i.e. original is emptied).
 #
 proc initSpot*(kms: var pot_t): spot_t =
     new(result)
     result.word_size = kms.word_size
     shallowCopy(result.seeds, kms.seeds)
     #kms.seeds = @[]
-    kms = nil  # simpler
+    kms = nil  # simpler, obvious move-construction
     make_searchable(result.seeds, result.ht)
 
 ##  Check for the presence or absence of a kmer in a
