@@ -12,7 +12,7 @@ help:
 	nimble -h
 	nimble tasks
 test:
-	nimble test --debug # uses "tests/" directory by default
+	nimble test --debug --lineCmd  # uses "tests/" directory by default
 install:
 	${NIMBLE_INSTALL}
 pretty:
