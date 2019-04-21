@@ -30,10 +30,14 @@ type
     Hash* = int
 
     ##  seeds - a pointer to the kmers
-    pot_t* = ref object
+    pot_t* = ref object of RootObj
         word_size*: uint8     # <=32
         seeds*: seq[seed_t]
         ht*: ref tables.Table[Bin, int]
+
+    ##  searchable seed-pot
+    spot_t* = ref object of pot_t
+        ht1*: tables.TableRef[Bin, int]
 
 var seq_nt4_table: array[256, int] = [
         0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -240,6 +244,25 @@ proc cmp_seeds(a, b: seed_t): int =
 
     return 1
 
+# Actual implementation, private.
+#
+proc make_searchable(seeds: var seq[seed_t], ht: var tables.TableRef[Bin, int]) =
+    seeds.sort(cmp_seeds)
+    ht = newTable[Bin, int]()
+    #let dups = sets.initHashSet[Bin]()
+    var ndups = 0
+
+    var i: int = 0
+    while i < seeds.len():
+        let key = seeds[i].kmer
+        if ht.hasKeyOrPut(key, i):
+            ndups += 1
+            #echo format("WARNING: Duplicate seed $# @$#, not re-adding @$#",
+            #        key, i, ht[key])
+        inc(i)
+    if ndups > 0:
+        echo format("WARNING: $# duplicates in kmer table", ndups)
+
 ##  Sort the seeds and load the kmers into a hash table.
 ##  For any dups, the table refers to the first seed with that kmer.
 ##  @param  pot_t * - a pointer to a pot
@@ -248,24 +271,15 @@ proc cmp_seeds(a, b: seed_t): int =
 proc make_searchable*(kms: pot_t): int {.discardable.} =
     if kms.searchable:
         return 1
-    kms.seeds.sort(cmp_seeds)
-    kms.ht = newTable[Bin, int]()
-    #let dups = sets.initHashSet[Bin]()
-    var ndups = 0
-
-    var i: int = 0
-    while i < kms.seeds.len():
-        let key = kms.seeds[i].kmer
-        if kms.ht.hasKeyOrPut(key, i):
-            ndups += 1
-            #echo format("WARNING: Duplicate seed $# @$#, not re-adding @$#",
-            #        key, i, kms.ht[key])
-        inc(i)
-    if ndups > 0:
-        echo format("WARNING: $# duplicates in kmer table", ndups)
-
+    make_searchable(kms.seeds, kms.ht)
     assert kms.searchable
     return 0
+
+proc initSpot*(kms: pot_t): spot_t =
+    new(result)
+    result.seeds = kms.seeds  # semantically, seq is copied
+    result.word_size = kms.word_size
+    make_searchable(result.seeds, kms.ht)
 
 ##  Check for the presence or absence of a kmer in a
 ##  pot regardless of the position.
