@@ -33,11 +33,10 @@ type
     pot_t* = ref object of RootObj
         word_size*: uint8     # <=32
         seeds*: seq[seed_t]
-        ht*: ref tables.Table[Bin, int]
 
     ##  searchable seed-pot
     spot_t* = ref object of pot_t
-        ht1*: tables.TableRef[Bin, int]
+        ht*: tables.TableRef[Bin, int]
 
 var seq_nt4_table: array[256, int] = [
         0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -207,9 +206,6 @@ proc bin_to_dna*(kmer: Bin; k: uint8; strand: bool): Dna =
 proc nkmers*(pot: pot_t): int =
     return len(pot.seeds)
 
-proc searchable*(pot: pot_t): bool =
-    return pot.ht != nil
-
 ##  Prints the pot structure to STDOUT
 ##  @param pot a ref to the pot
 #
@@ -268,34 +264,34 @@ proc make_searchable(seeds: var seq[seed_t], ht: var tables.TableRef[Bin, int]) 
 ##  @param  pot_t * - a pointer to a pot
 ##  @return 0 if a new table was created
 #
-proc make_searchable*(kms: pot_t): int {.discardable.} =
-    if kms.searchable:
-        return 1
-    make_searchable(kms.seeds, kms.ht)
-    assert kms.searchable
-    return 0
+#proc make_searchable*(kms: pot_t): int {.discardable.} =
+#    if kms.searchable:
+#        return 1
+#    make_searchable(kms.seeds, kms.ht)
+#    assert kms.searchable
+#    return 0
 
 proc initSpot*(kms: pot_t): spot_t =
     new(result)
     result.seeds = kms.seeds  # semantically, seq is copied
     result.word_size = kms.word_size
-    make_searchable(result.seeds, kms.ht)
+    make_searchable(result.seeds, result.ht)
 
 ##  Check for the presence or absence of a kmer in a
 ##  pot regardless of the position.
 ##  @param  pot_t * - a pointer to a pot
 ##  @return false if kmer doesn't exist
 #
-proc haskmer*(target: pot_t; query: Bin): bool =
-    if not target.searchable:
-        raiseEx("haskmer requires searchable pot")
+proc haskmer*(target: spot_t; query: Bin): bool =
     if target.ht.hasKey(query):
         return true
     return false
 
-proc difference*(target, remove: pot_t) =
-    if(not remove.searchable):
-        raiseEx("difference requires searchable second argument")
+## Find (target - remove), without altering target.
+#
+proc difference*(target: pot_t, remove: spot_t): pot_t =
+    new(result)
+    result.word_size = target.word_size
 
     var kmer_stack = newSeq[seed_t]()
 
@@ -303,16 +299,11 @@ proc difference*(target, remove: pot_t) =
         if(not haskmer(remove, target.seeds[i].kmer)):
             kmer_stack.add(target.seeds[i])
 
-    if target.searchable:
-        target.ht = nil
-
-    assert target.searchable == false;
-    target.seeds = kmer_stack
+    result.seeds = kmer_stack
 
 ## Return the seeds in the intersection of target and query.
 #
-proc search*(target: pot_t; query: pot_t): deques.Deque[seed_pair_t] =
-    discard make_searchable(target)
+proc search*(target: spot_t; query: pot_t): deques.Deque[seed_pair_t] =
     echo format("Searching through $# kmers", query.seeds.len())
     var hit_stack = deques.initDeque[seed_pair_t](128)
     var hit: seed_pair_t
