@@ -288,9 +288,7 @@ proc haskmer*(target: spot_t; query: Bin): bool =
 ## @param pot_t * - a pointer to a pot_t
 ## @return int - number of shared kmers
 #
-proc uniqueShared*(a,b: pot_t): int =
- make_searchable(a)
- make_searchable(b)
+proc uniqueShared*(a,b: spot_t): int =
  result = 0
 
  for k in a.ht.keys():
@@ -343,9 +341,5 @@ proc search*(target: spot_t; query: pot_t): deques.Deque[seed_pair_t] =
 ## @param pot_t - a ref to a pot_t
 ## TODO: add test coverage
 #
-proc nuniq*(pot: pot_t): int =
- if searchable(pot):
-  return len(pot.ht)
- else:
-  make_searchable(pot)
+proc nuniq*(pot: spot_t): int =
   return len(pot.ht)
