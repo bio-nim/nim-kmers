@@ -30,10 +30,13 @@ type
     Hash* = int
 
     ##  seeds - a pointer to the kmers
-    pot_t* = ref object
+    pot_t* = ref object of RootObj
         word_size*: uint8     # <=32
         seeds*: seq[seed_t]
-        ht*: ref tables.Table[Bin, int]
+
+    ##  searchable seed-pot
+    spot_t* = ref object of pot_t
+        ht*: tables.TableRef[Bin, int]
 
 var seq_nt4_table: array[256, int] = [
         0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -203,9 +206,6 @@ proc bin_to_dna*(kmer: Bin; k: uint8; strand: bool): Dna =
 proc nkmers*(pot: pot_t): int =
     return len(pot.seeds)
 
-proc searchable*(pot: pot_t): bool =
-    return pot.ht != nil
-
 ##  Prints the pot structure to STDOUT
 ##  @param pot a ref to the pot
 #
@@ -240,48 +240,54 @@ proc cmp_seeds(a, b: seed_t): int =
 
     return 1
 
-##  Sort the seeds and load the kmers into a hash table.
-##  For any dups, the table refers to the first seed with that kmer.
-##  @param  pot_t * - a pointer to a pot
-##  @return 0 if a new table was created
+# Actual implementation, private.
 #
-proc make_searchable*(kms: pot_t): int {.discardable.} =
-    if kms.searchable:
-        return 1
-    kms.seeds.sort(cmp_seeds)
-    kms.ht = newTable[Bin, int]()
+proc make_searchable(seeds: var seq[seed_t], ht: var tables.TableRef[Bin, int]) =
+    seeds.sort(cmp_seeds)
+    ht = newTable[Bin, int]()
     #let dups = sets.initHashSet[Bin]()
     var ndups = 0
 
     var i: int = 0
-    while i < kms.seeds.len():
-        let key = kms.seeds[i].kmer
-        if kms.ht.hasKeyOrPut(key, i):
+    while i < seeds.len():
+        let key = seeds[i].kmer
+        if ht.hasKeyOrPut(key, i):
             ndups += 1
             #echo format("WARNING: Duplicate seed $# @$#, not re-adding @$#",
-            #        key, i, kms.ht[key])
+            #        key, i, ht[key])
         inc(i)
     if ndups > 0:
         echo format("WARNING: $# duplicates in kmer table", ndups)
 
-    assert kms.searchable
-    return 0
+##  Construct searchable-pot from pot.
+##  Move construct seeds (i.e. original is emptied).
+##
+##  Sort the seeds and load the kmers into a hash table.
+##  For any dups, the table refers to the first seed with that kmer.
+#
+proc initSpot*(kms: var pot_t): spot_t =
+    new(result)
+    result.word_size = kms.word_size
+    shallowCopy(result.seeds, kms.seeds)
+    #kms.seeds = @[]
+    kms = nil  # simpler, obvious move-construction
+    make_searchable(result.seeds, result.ht)
 
 ##  Check for the presence or absence of a kmer in a
 ##  pot regardless of the position.
 ##  @param  pot_t * - a pointer to a pot
 ##  @return false if kmer doesn't exist
 #
-proc haskmer*(target: pot_t; query: Bin): bool =
-    if not target.searchable:
-        raiseEx("haskmer requires searchable pot")
+proc haskmer*(target: spot_t; query: Bin): bool =
     if target.ht.hasKey(query):
         return true
     return false
 
-proc difference*(target, remove: pot_t) =
-    if(not remove.searchable):
-        raiseEx("difference requires searchable second argument")
+## Find (target - remove), without altering target.
+#
+proc difference*(target: pot_t, remove: spot_t): pot_t =
+    new(result)
+    result.word_size = target.word_size
 
     var kmer_stack = newSeq[seed_t]()
 
@@ -289,16 +295,11 @@ proc difference*(target, remove: pot_t) =
         if(not haskmer(remove, target.seeds[i].kmer)):
             kmer_stack.add(target.seeds[i])
 
-    if target.searchable:
-        target.ht = nil
-
-    assert target.searchable == false;
-    target.seeds = kmer_stack
+    result.seeds = kmer_stack
 
 ## Return the seeds in the intersection of target and query.
 #
-proc search*(target: pot_t; query: pot_t): deques.Deque[seed_pair_t] =
-    discard make_searchable(target)
+proc search*(target: spot_t; query: pot_t): deques.Deque[seed_pair_t] =
     echo format("Searching through $# kmers", query.seeds.len())
     var hit_stack = deques.initDeque[seed_pair_t](128)
     var hit: seed_pair_t

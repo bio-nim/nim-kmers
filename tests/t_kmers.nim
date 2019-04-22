@@ -1,5 +1,5 @@
 # vim: sw=4 ts=4 sts=4 tw=0 et:
-from kmers import hash, searchable  # avoiding "*" imports
+from kmers import hash  # avoiding "*" imports
 import unittest
 import deques
 import sequtils
@@ -27,9 +27,12 @@ test "sorted_kmers":
             "TCGGCTACTATT",
         ]
         k = 12
+    var
         kms = kmers.dna_to_kmers(sq, k)
-    discard kmers.make_searchable(kms) # sort
-    let got = sequtils.mapIt(kms.seeds, kmers.bin_to_dna(it.kmer, k.uint8,
+    check kms != nil
+    let spot = kmers.initSpot(kms) # sort
+    check kms == nil
+    let got = sequtils.mapIt(spot.seeds, kmers.bin_to_dna(it.kmer, k.uint8,
             it.strand))
     check got == expected
     #check kmers.haskmer("AGCCGATGATAA", kms)
@@ -38,10 +41,11 @@ test "search":
     let
         sq = "ATCGGCTACTATT"
         k = 12
-        kms = kmers.dna_to_kmers(sq, k)
         qms = kmers.dna_to_kmers(sq, k)
-    check kmers.make_searchable(kms) == 0
-    let hits = kmers.search(kms, qms)
+    var
+        kms = kmers.dna_to_kmers(sq, k)
+    let spot = kmers.initSpot(kms)
+    let hits = kmers.search(spot, qms)
     check hits.len() == 4
     #check sets.toSet(seqUtils.toSeq(hits)).len() == 4 # 4 unique items
     check sets.len(sets.toSet(seqUtils.toSeq(deques.items(hits)))) == 4  # same as above
@@ -51,12 +55,6 @@ suite "difference":
         sq = "ATCGGCTACTATT"
         k = 12
 
-    test "exc":
-        let qms = kmers.dna_to_kmers(sq, k)
-        let kms = kmers.dna_to_kmers(sq, k)
-        expect kmers.PbError:
-            kmers.difference(kms, qms)
-
     test "difference_of_self_is_nothing":
         let kms = kmers.dna_to_kmers(sq, k)
         #let qms = deepCopy(kms)
@@ -65,36 +63,35 @@ suite "difference":
         check qms[] == kms[]
         check kmers.nkmers(qms) == 4
         check kmers.nkmers(kms) == 4
-        discard kmers.make_searchable(qms)
-        check qms.searchable
-        check (not kms.searchable)
+        let qspot = kmers.initSpot(qms)
+        check qms == nil
 
-        kmers.difference(kms, qms)
+        let kms0 = kmers.difference(kms, qspot)
 
-        check kmers.nkmers(kms) == 0
-        check kmers.nkmers(qms) == 4
-        check qms.searchable
-        check (not kms.searchable)
+        check kmers.nkmers(kms0) == 0
+        check kmers.nkmers(kms) == 4
+        check kmers.nkmers(qspot) == 4
 
         let
             expected: array[0, string] = []
-            got = kmers.get_dnas(kms)
+            got = kmers.get_dnas(kms0)
         check got == expected
 
     test "difference_of_nothing_is_self":
         let kms = kmers.dna_to_kmers(sq, k)
-        let qms = kmers.dna_to_kmers("", k)
+        var qms = kmers.dna_to_kmers("", k)
         #let orig = deepCopy(kms)
         var orig: kmers.pot_t
         deepCopy(orig, kms)
         check kmers.nkmers(qms) == 0
         check kmers.nkmers(kms) == 4
-        discard kmers.make_searchable(qms)
-        check qms.searchable
+        let qspot = kmers.initSpot(qms)
+        check qms == nil
 
-        kmers.difference(kms, qms)
+        let kms4 = kmers.difference(kms, qspot)
 
+        check kmers.nkmers(kms4) == 4
         check kmers.nkmers(kms) == 4
-        let got = kmers.get_dnas(kms)
+        let got = kmers.get_dnas(kms4)
         let expected = kmers.get_dnas(orig)
         check got == expected
