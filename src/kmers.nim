@@ -275,13 +275,25 @@ proc initSpot*(kms: var pot_t): spot_t =
 
 ##  Check for the presence or absence of a kmer in a
 ##  pot regardless of the position.
-##  @param  pot_t * - a pointer to a pot
+##  @param  pot_t * - a pointer to a pot_t
 ##  @return false if kmer doesn't exist
 #
 proc haskmer*(target: spot_t; query: Bin): bool =
     if target.ht.hasKey(query):
         return true
     return false
+
+## Counts the number of shared unique kmers
+## @param pot_t * - a pointer to a pot_t
+## @param pot_t * - a pointer to a pot_t
+## @return int - number of shared kmers
+#
+proc uniqueShared*(a,b: spot_t): int =
+ result = 0
+
+ for k in a.ht.keys():
+  if(haskmer(b, k)):
+   inc(result)
 
 ## Find (target - remove), without altering target.
 #
@@ -323,3 +335,11 @@ proc search*(target: spot_t; query: pot_t): deques.Deque[seed_pair_t] =
         inc(i)
 
     return hit_stack
+
+## This function counts the number of uniq kmers in the pot if searchable if not
+## the function calls make searchable.
+## @param pot_t - a ref to a pot_t
+## TODO: add test coverage
+#
+proc nuniq*(pot: spot_t): int =
+  return len(pot.ht)
